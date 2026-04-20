@@ -1,0 +1,182 @@
+[
+  {
+    "text": "What is the capital of France?",
+    "options": ["London", "Berlin", "Paris", "Rome"],
+    "correctOptionIndex": 2,
+    "difficulty": "EASY"
+  },
+  {
+    "text": "Which planet is known as the Red Planet?",
+    "options": ["Earth", "Mars", "Jupiter", "Saturn"],
+    "correctOptionIndex": 1,
+    "difficulty": "EASY"
+  },
+  {
+    "text": "What is 5 + 7?",
+    "options": ["10", "11", "12", "13"],
+    "correctOptionIndex": 2,
+    "difficulty": "EASY"
+  },
+  {
+    "text": "How many continents are there on Earth?",
+    "options": ["5", "6", "7", "8"],
+    "correctOptionIndex": 2,
+    "difficulty": "EASY"
+  },
+  {
+    "text": "What gas do plants absorb from the atmosphere?",
+    "options": ["Oxygen", "Nitrogen", "Carbon Dioxide", "Hydrogen"],
+    "correctOptionIndex": 2,
+    "difficulty": "EASY"
+  },
+  {
+    "text": "Which ocean is the largest?",
+    "options": ["Atlantic", "Indian", "Arctic", "Pacific"],
+    "correctOptionIndex": 3,
+    "difficulty": "EASY"
+  },
+  {
+    "text": "What color are emeralds?",
+    "options": ["Red", "Blue", "Green", "Yellow"],
+    "correctOptionIndex": 2,
+    "difficulty": "EASY"
+  },
+  {
+    "text": "How many legs does a spider have?",
+    "options": ["6", "8", "10", "12"],
+    "correctOptionIndex": 1,
+    "difficulty": "EASY"
+  },
+  {
+    "text": "What is the largest mammal in the world?",
+    "options": ["Elephant", "Blue Whale", "Giraffe", "Hippopotamus"],
+    "correctOptionIndex": 1,
+    "difficulty": "EASY"
+  },
+  {
+    "text": "Which fruit is known as the 'King of Fruits'?",
+    "options": ["Apple", "Mango", "Banana", "Pineapple"],
+    "correctOptionIndex": 1,
+    "difficulty": "EASY"
+  },
+  {
+    "text": "Who wrote 'Hamlet'?",
+    "options": ["Charles Dickens", "William Shakespeare", "Jane Austen", "Mark Twain"],
+    "correctOptionIndex": 1,
+    "difficulty": "MEDIUM"
+  },
+  {
+    "text": "What is the largest organ in the human body?",
+    "options": ["Heart", "Liver", "Skin", "Brain"],
+    "correctOptionIndex": 2,
+    "difficulty": "MEDIUM"
+  },
+  {
+    "text": "What is the symbol for Gold on the periodic table?",
+    "options": ["Au", "Ag", "Gd", "Go"],
+    "correctOptionIndex": 0,
+    "difficulty": "MEDIUM"
+  },
+  {
+    "text": "Which country is home to the kangaroo?",
+    "options": ["New Zealand", "South Africa", "Australia", "Brazil"],
+    "correctOptionIndex": 2,
+    "difficulty": "MEDIUM"
+  },
+  {
+    "text": "What is the speed of light approximately?",
+    "options": ["300,000 km/s", "150,000 km/s", "500,000 km/s", "100,000 km/s"],
+    "correctOptionIndex": 0,
+    "difficulty": "MEDIUM"
+  },
+  {
+    "text": "Who painted the Mona Lisa?",
+    "options": ["Michelangelo", "Raphael", "Leonardo da Vinci", "Donatello"],
+    "correctOptionIndex": 2,
+    "difficulty": "MEDIUM"
+  },
+  {
+    "text": "What is the chemical formula for water?",
+    "options": ["CO2", "H2O", "NaCl", "O2"],
+    "correctOptionIndex": 1,
+    "difficulty": "MEDIUM"
+  },
+  {
+    "text": "Which element has the atomic number 1?",
+    "options": ["Helium", "Oxygen", "Carbon", "Hydrogen"],
+    "correctOptionIndex": 3,
+    "difficulty": "MEDIUM"
+  },
+  {
+    "text": "In which year did World War II end?",
+    "options": ["1943", "1944", "1945", "1946"],
+    "correctOptionIndex": 2,
+    "difficulty": "MEDIUM"
+  },
+  {
+    "text": "What is the powerhouse of the cell?",
+    "options": ["Nucleus", "Ribosome", "Mitochondria", "Golgi Body"],
+    "correctOptionIndex": 2,
+    "difficulty": "MEDIUM"
+  },
+  {
+    "text": "In what year did the Titanic sink?",
+    "options": ["1905", "1912", "1920", "1898"],
+    "correctOptionIndex": 1,
+    "difficulty": "HARD"
+  },
+  {
+    "text": "What is the hardest natural substance on Earth?",
+    "options": ["Gold", "Iron", "Diamond", "Platinum"],
+    "correctOptionIndex": 2,
+    "difficulty": "HARD"
+  },
+  {
+    "text": "What is the boiling point of water in Fahrenheit?",
+    "options": ["100", "212", "180", "150"],
+    "correctOptionIndex": 1,
+    "difficulty": "HARD"
+  },
+  {
+    "text": "What is the smallest prime number?",
+    "options": ["0", "1", "2", "3"],
+    "correctOptionIndex": 2,
+    "difficulty": "HARD"
+  },
+  {
+    "text": "Which physicist developed the theory of general relativity?",
+    "options": ["Isaac Newton", "Niels Bohr", "Albert Einstein", "Max Planck"],
+    "correctOptionIndex": 2,
+    "difficulty": "HARD"
+  },
+  {
+    "text": "What is the longest river in the world?",
+    "options": ["Amazon", "Nile", "Yangtze", "Mississippi"],
+    "correctOptionIndex": 1,
+    "difficulty": "HARD"
+  },
+  {
+    "text": "Which blood type is considered the universal donor?",
+    "options": ["A+", "B+", "AB+", "O-"],
+    "correctOptionIndex": 3,
+    "difficulty": "HARD"
+  },
+  {
+    "text": "What is the capital of Mongolia?",
+    "options": ["Astana", "Ulaanbaatar", "Bishkek", "Tashkent"],
+    "correctOptionIndex": 1,
+    "difficulty": "HARD"
+  },
+  {
+    "text": "In computing, what does 'CPU' stand for?",
+    "options": ["Central Processing Unit", "Central Program Utility", "Computer Personal Unit", "Central Processor Utility"],
+    "correctOptionIndex": 0,
+    "difficulty": "HARD"
+  },
+  {
+    "text": "Which planet has the most moons?",
+    "options": ["Jupiter", "Saturn", "Uranus", "Neptune"],
+    "correctOptionIndex": 1,
+    "difficulty": "HARD"
+  }
+]
