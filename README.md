@@ -2,6 +2,8 @@
 
 A modern, professionally designed quiz application built with **JavaFX 17** following the **MVC architecture pattern**. Features a beautiful dark-mode glassmorphism interface with smooth animations, AI-powered question generation via **Ollama Cloud API**, and a sophisticated points-and-trophy progression system.
 
+![QuizMaster Application Screenshot](assets/screenshot.png)
+
 ---
 
 ## ✨ Features
