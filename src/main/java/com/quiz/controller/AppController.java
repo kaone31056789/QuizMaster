@@ -9,36 +9,66 @@ import com.quiz.util.AnimationHelper;
 import com.quiz.util.ConfigManager;
 import com.quiz.util.DataLoader;
 import javafx.animation.*;
+import javafx.application.HostServices;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
+import java.io.File;
 import java.util.List;
 
 public class AppController {
 
     private static Stage primaryStage;
+    private static HostServices hostServices;
+
+    // Remembered so "Play again" can replay the same round
+    private static Difficulty lastDifficulty = Difficulty.EASY;
+    private static int lastQuestionCount = 10;
+    private static boolean lastUsedAI = false;
 
     public static void setPrimaryStage(Stage stage) {
         primaryStage = stage;
-        primaryStage.setMinWidth(850);
-        primaryStage.setMinHeight(650);
+        primaryStage.setMinWidth(900);
+        primaryStage.setMinHeight(680);
         primaryStage.setResizable(true);
         primaryStage.setMaximized(true); // Open in full screen (maximized)
+    }
+
+    public static void setHostServices(HostServices services) {
+        hostServices = services;
+    }
+
+    /** Open a web link in the default browser. */
+    public static void openUrl(String url) {
+        if (hostServices != null) hostServices.showDocument(url);
+    }
+
+    /** Open the folder that holds config.properties in the file manager. */
+    public static void openConfigFolder() {
+        File dir = new File(ConfigManager.getConfigDir());
+        dir.mkdirs();
+        if (hostServices != null) hostServices.showDocument(dir.toURI().toString());
+    }
+
+    public static boolean isDarkTheme() {
+        return "DARK".equals(ConfigManager.getTheme());
     }
 
     public static void applyTheme() {
         if (primaryStage.getScene() != null) {
             primaryStage.getScene().getStylesheets().clear();
             primaryStage.getScene().getStylesheets().add(AppController.class.getResource("/styles.css").toExternalForm());
-            
-            if ("DARK".equals(ConfigManager.getTheme())) {
+
+            if (isDarkTheme()) {
                 primaryStage.getScene().getStylesheets().add(AppController.class.getResource("/dark-mode.css").toExternalForm());
             }
         }
@@ -46,7 +76,7 @@ public class AppController {
 
     private static void switchRoot(javafx.scene.Parent root, String title) {
         if (primaryStage.getScene() == null) {
-            Scene scene = new Scene(root, 850, 650);
+            Scene scene = new Scene(root, 1100, 760);
             primaryStage.setScene(scene);
             applyTheme();
         } else {
@@ -68,7 +98,7 @@ public class AppController {
      * Called after splash animation finishes.
      */
     public static void afterSplash() {
-        if (ConfigManager.isFirstRun()) {
+        if (ConfigManager.isFirstRun() && !ConfigManager.hasApiKey()) {
             showSetupScreen();
         } else {
             showStartScreen();
@@ -90,7 +120,24 @@ public class AppController {
         switchRoot(settingsView.getView(), "Quiz Master — Settings");
     }
 
+    public static Difficulty getLastDifficulty() { return lastDifficulty; }
+    public static int getLastQuestionCount() { return lastQuestionCount; }
+    public static boolean getLastUsedAI() { return lastUsedAI; }
+
+    /** Replay a round with the same settings as the last one. */
+    public static void replayLast() {
+        if (lastUsedAI && ConfigManager.hasApiKey()) {
+            startQuizWithAI(lastDifficulty, ConfigManager.getApiKey(), ConfigManager.getModel(), lastQuestionCount);
+        } else {
+            startQuiz(lastDifficulty, lastQuestionCount);
+        }
+    }
+
     public static void startQuiz(Difficulty difficulty, int questionCount) {
+        lastDifficulty = difficulty;
+        lastQuestionCount = questionCount;
+        lastUsedAI = false;
+
         List<Question> questions = DataLoader.getQuestionsByDifficulty(difficulty);
         if (questions == null || questions.isEmpty()) {
             System.err.println("No questions found for difficulty: " + difficulty);
@@ -109,147 +156,104 @@ public class AppController {
      * AI quiz flow — generates ALL questions in parallel using fastest cloud models.
      */
     public static void startQuizWithAI(Difficulty difficulty, String apiKey, String model, int questionCount) {
-        VBox loadingView = new VBox(0);
-        loadingView.setAlignment(Pos.CENTER);
-        loadingView.getStyleClass().add("root");
+        lastDifficulty = difficulty;
+        lastQuestionCount = questionCount;
+        lastUsedAI = true;
 
-        // === Animated loading card ===
-        VBox loadingCard = new VBox(14);
-        loadingCard.setAlignment(Pos.CENTER);
-        loadingCard.setMaxWidth(400);
-        loadingCard.setPadding(new Insets(40, 30, 40, 30));
-        loadingCard.getStyleClass().add("card");
+        // === Loading panel ===
+        VBox card = new VBox(18);
+        card.getStyleClass().add("panel");
+        card.setAlignment(Pos.CENTER_LEFT);
+        card.setMaxWidth(500);
+        card.setPadding(new Insets(36, 40, 36, 40));
 
-        // Pulsing robot icon with rotation
-        Label loadingIcon = new Label("\uD83E\uDD16");
-        loadingIcon.setStyle("-fx-font-size: 52px;");
+        // Slowly spinning sparkle
+        Node sparkle = Ui.icon(Ui.I_SPARKLE, 34, "icon-accent");
+        RotateTransition spin = new RotateTransition(Duration.seconds(6), sparkle);
+        spin.setByAngle(360);
+        spin.setCycleCount(Animation.INDEFINITE);
+        spin.setInterpolator(Interpolator.LINEAR);
+        spin.play();
 
-        // Pulse animation on the icon
-        ScaleTransition iconPulse = new ScaleTransition(Duration.millis(800), loadingIcon);
-        iconPulse.setFromX(1.0); iconPulse.setFromY(1.0);
-        iconPulse.setToX(1.15); iconPulse.setToY(1.15);
-        iconPulse.setCycleCount(Animation.INDEFINITE);
-        iconPulse.setAutoReverse(true);
-        iconPulse.setInterpolator(Interpolator.EASE_BOTH);
-        iconPulse.play();
+        ScaleTransition pulse = new ScaleTransition(Duration.millis(900), sparkle);
+        pulse.setToX(1.15);
+        pulse.setToY(1.15);
+        pulse.setAutoReverse(true);
+        pulse.setCycleCount(Animation.INDEFINITE);
+        pulse.setInterpolator(Interpolator.EASE_BOTH);
+        pulse.play();
 
-        // Gentle rotation
-        RotateTransition iconRotate = new RotateTransition(Duration.millis(3000), loadingIcon);
-        iconRotate.setFromAngle(-5);
-        iconRotate.setToAngle(5);
-        iconRotate.setCycleCount(Animation.INDEFINITE);
-        iconRotate.setAutoReverse(true);
-        iconRotate.setInterpolator(Interpolator.EASE_BOTH);
-        iconRotate.play();
+        Label eyebrow = Ui.label("GENERATING ROUND · " + difficulty, "eyebrow-accent");
+        Label title = Ui.wrapped("Writing your questions…", 420, "h1");
 
-        // === Orbiting spinner dots ===
-        javafx.scene.layout.StackPane spinnerPane = new javafx.scene.layout.StackPane();
-        spinnerPane.setPrefSize(120, 120);
-        spinnerPane.setMaxSize(120, 120);
+        Label modelLbl = Ui.label("Connecting to " + ConfigManager.getModel(), "mono");
 
-        HBox dotsRow = new HBox(8);
-        dotsRow.setAlignment(Pos.CENTER);
-        String[] dotColors = {"#8b5cf6", "#3b82f6", "#22c55e", "#f59e0b", "#ef4444"};
-        Label[] dots = new Label[5];
-        for (int i = 0; i < 5; i++) {
-            dots[i] = new Label("\u25CF");
-            dots[i].setStyle("-fx-font-size: 12px; -fx-text-fill: " + dotColors[i] + ";");
+        ProgressBar loadBar = new ProgressBar(0);
+        loadBar.setMaxWidth(Double.MAX_VALUE);
+        loadBar.setProgress(ProgressBar.INDETERMINATE_PROGRESS);
 
-            // Staggered bounce animation per dot
-            TranslateTransition bounce = new TranslateTransition(Duration.millis(500), dots[i]);
-            bounce.setFromY(0);
-            bounce.setToY(-12);
-            bounce.setCycleCount(Animation.INDEFINITE);
-            bounce.setAutoReverse(true);
-            bounce.setDelay(Duration.millis(i * 100));
-            bounce.setInterpolator(Interpolator.EASE_BOTH);
-            bounce.play();
+        Label progressLbl = Ui.label(String.format("%02d / %02d READY", 0, questionCount), "eyebrow");
 
-            dotsRow.getChildren().add(dots[i]);
-        }
+        HBox progressRow = new HBox(progressLbl, Ui.hgrow(), modelLbl);
+        progressRow.setAlignment(Pos.CENTER_LEFT);
 
-        // === Animated text with cycling dots ===
-        Label loadingLabel = new Label("Generating questions");
-        loadingLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #c0c0e0;");
-
-        // Cycle the dots: "." → ".." → "..." → ""
-        Timeline dotsCycle = new Timeline(
-            new KeyFrame(Duration.millis(400), e -> loadingLabel.setText("Generating questions.")),
-            new KeyFrame(Duration.millis(800), e -> loadingLabel.setText("Generating questions..")),
-            new KeyFrame(Duration.millis(1200), e -> loadingLabel.setText("Generating questions...")),
-            new KeyFrame(Duration.millis(1600), e -> loadingLabel.setText("Generating questions"))
-        );
-        dotsCycle.setCycleCount(Animation.INDEFINITE);
-        dotsCycle.play();
-
-        // === Model status label ===
-        Label modelLbl = new Label("Connecting to AI...");
-        modelLbl.setStyle("-fx-text-fill: #9090b0; -fx-font-size: 12px;");
-
-        // === Progress counter ===
-        Label progressLbl = new Label("0 / " + questionCount + " questions ready");
-        progressLbl.setStyle("-fx-text-fill: #7c5ce7; -fx-font-size: 13px; -fx-font-weight: bold;");
-
-        // === Fun tips that cycle ===
+        // === Rotating tips ===
         String[] tips = {
-            "\uD83D\uDCA1 Tip: Use 50:50 lifeline when stuck!",
-            "\u23F0 Tip: Faster answers earn more points!",
-            "\uD83D\uDD25 Tip: Build streaks for combo bonuses!",
-            "\u23E9 Tip: Skip saves your streak!",
-            "\uD83E\uDDE0 Tip: Each question has a unique topic!"
+            "Stuck? 50:50 removes two wrong answers.",
+            "Faster answers earn up to 50 bonus points.",
+            "Chain correct answers to build a streak bonus.",
+            "Skip keeps your streak alive — use it wisely.",
+            "Press A–D or 1–4 to answer from the keyboard.",
+            "Every question gets its own topic, and none repeat."
         };
-        Label tipLbl = new Label(tips[0]);
-        tipLbl.setStyle("-fx-text-fill: #6b6b9a; -fx-font-size: 11px; -fx-font-style: italic;");
-        tipLbl.setWrapText(true);
+        Label tipLbl = Ui.wrapped(tips[0], 420, "body");
 
         Timeline tipCycle = new Timeline();
         for (int i = 0; i < tips.length; i++) {
             final String tip = tips[i];
             tipCycle.getKeyFrames().add(
-                new KeyFrame(Duration.seconds(i * 3), e -> {
-                    tipLbl.setOpacity(0);
+                new KeyFrame(Duration.seconds(i * 3.5), e -> {
                     tipLbl.setText(tip);
-                    FadeTransition ft = new FadeTransition(Duration.millis(400), tipLbl);
-                    ft.setFromValue(0); ft.setToValue(1);
-                    ft.play();
+                    AnimationHelper.applyFadeIn(tipLbl, 400);
                 })
             );
         }
-        tipCycle.getKeyFrames().add(new KeyFrame(Duration.seconds(tips.length * 3)));
+        tipCycle.getKeyFrames().add(new KeyFrame(Duration.seconds(tips.length * 3.5)));
         tipCycle.setCycleCount(Animation.INDEFINITE);
         tipCycle.play();
 
-        // === Progress bar ===
-        ProgressBar loadBar = new ProgressBar(0);
-        loadBar.setPrefWidth(280);
-        loadBar.setMaxWidth(280);
-        loadBar.getStyleClass().add("progress-bar");
+        VBox tipBox = new VBox(6, Ui.label("WHILE YOU WAIT", "eyebrow"), tipLbl);
+        tipBox.getStyleClass().add("panel-flat");
 
-        Separator sep = new Separator();
-        sep.setMaxWidth(200);
+        Button cancelBtn = Ui.button("Cancel", "btn-ghost", Ui.I_ARROW_LEFT);
 
-        loadingCard.getChildren().addAll(
-            loadingIcon, dotsRow, loadingLabel,
-            modelLbl, loadBar, progressLbl,
-            sep, tipLbl
-        );
+        card.getChildren().addAll(sparkle, eyebrow, title, loadBar, progressRow, tipBox, cancelBtn);
 
-        loadingView.getChildren().add(loadingCard);
+        StackPane loadingView = new StackPane(card);
+        loadingView.getStyleClass().add("root");
+        loadingView.setPadding(new Insets(40));
 
-        // Slide the card in
-        AnimationHelper.applySlideUp(loadingCard, 500);
+        AnimationHelper.applySlideUp(card, 500);
 
-        switchRoot(loadingView, "Quiz Master \u2014 Loading");
+        switchRoot(loadingView, "Quiz Master — Loading");
 
-        new Thread(() -> {
-            AIQuestionGenerator gen = new AIQuestionGenerator("https://ollama.com", apiKey);
+        final boolean[] cancelled = {false};
+        Runnable stopAnims = () -> { spin.stop(); pulse.stop(); tipCycle.stop(); };
+        cancelBtn.setOnAction(e -> {
+            cancelled[0] = true;
+            stopAnims.run();
+            showStartScreen();
+        });
+
+        Thread worker = new Thread(() -> {
+            AIQuestionGenerator gen = new AIQuestionGenerator("https://ollama.com", model, apiKey);
 
             // Live status updates — progress bar + model status
             gen.setStatusCallback((usedModel, qNum, total) -> {
                 Platform.runLater(() -> {
                     int displayNum = Math.min(qNum, questionCount);
-                    modelLbl.setText("Q" + qNum + " \u2192 " + usedModel);
-                    progressLbl.setText(displayNum + " / " + questionCount + " questions ready");
+                    modelLbl.setText("Q" + qNum + " → " + usedModel);
+                    progressLbl.setText(String.format("%02d / %02d READY", displayNum, questionCount));
                     loadBar.setProgress((double) qNum / total);
                 });
             });
@@ -261,18 +265,26 @@ public class AppController {
                 System.out.println("Generated " + aiQuestions.size() + " questions in " + elapsed + "ms");
 
                 Platform.runLater(() -> {
+                    if (cancelled[0]) return;
+                    stopAnims.run();
                     if (aiQuestions != null && !aiQuestions.isEmpty()) {
                         QuizSession session = new QuizSession(aiQuestions, difficulty);
                         showQuizScene(session);
                     } else {
-                        showConnectionError("The AI failed to generate valid questions. Try again or check your model.");
+                        showConnectionError("The AI didn't return any usable questions. Try again, or pick a different model in Settings.");
                     }
                 });
             } catch (Exception ex) {
                 System.err.println("AI generation failed: " + ex.getMessage());
-                Platform.runLater(() -> showConnectionError("AI Failed: " + ex.getMessage()));
+                Platform.runLater(() -> {
+                    if (cancelled[0]) return;
+                    stopAnims.run();
+                    showConnectionError(ex.getMessage());
+                });
             }
-        }).start();
+        });
+        worker.setDaemon(true);
+        worker.start();
     }
 
     private static void startQuizFetcherDaemon(QuizSession session, Difficulty difficulty, String apiKey, int batchSize) {
@@ -280,12 +292,12 @@ public class AppController {
             AIQuestionGenerator gen = new AIQuestionGenerator("https://ollama.com", apiKey);
             while (true) {
                 try { Thread.sleep(2000); } catch(Exception e) {}
-                
+
                 // Stop daemon if user quits playing
                 if (primaryStage.getScene() == null) break;
-                
+
                 // If they are on another screen or stopped, terminate gracefully
-                if (!"Quiz Master \u2014 Playing".equals(primaryStage.getTitle())) break;
+                if (!"Quiz Master — Playing".equals(primaryStage.getTitle())) break;
 
                 // Aggressively prefetch if remaining drops below 3
                 if (session.getRemainingQuestionsCount() <= 2) {
@@ -305,36 +317,40 @@ public class AppController {
     }
 
     private static void showConnectionError(String errorDetail) {
-        VBox errorView = new VBox(16);
-        errorView.setAlignment(Pos.CENTER);
-        errorView.getStyleClass().add("root");
+        StackPane badge = new StackPane(Ui.icon(Ui.I_ALERT, 26, "icon-bad"));
+        badge.setStyle("-fx-background-color: -c-bad-soft; -fx-background-radius: 999;");
+        badge.setMinSize(56, 56);
+        badge.setMaxSize(56, 56);
 
-        Label errorIcon = new Label("\u26A0");
-        errorIcon.setStyle("-fx-font-size: 48px;");
+        Label eyebrow = Ui.label("CONNECTION FAILED", "eyebrow");
+        eyebrow.getStyleClass().add("status-bad");
 
-        Label errorTitle = new Label("Connection Failed");
-        errorTitle.setStyle("-fx-font-size: 22px; -fx-text-fill: #dc2626; -fx-font-weight: bold;");
+        Label title = Ui.wrapped("Couldn't reach the AI.", 420, "h1");
+        Label errorMsg = Ui.wrapped(errorDetail, 420, "body");
+        Label help = Ui.wrapped("Check your key under Settings, or play this round with the built-in questions.", 420, "muted");
 
-        Label errorMsg = new Label(errorDetail);
-        errorMsg.setStyle("-fx-text-fill: #7070a0; -fx-font-size: 13px; -fx-text-alignment: center;");
-        errorMsg.setWrapText(true);
-        errorMsg.setMaxWidth(380);
+        Button offlineBtn = Ui.button("Play offline", "btn-primary", Ui.I_ARROW_RIGHT);
+        offlineBtn.setOnAction(e -> startQuiz(lastDifficulty, lastQuestionCount));
 
-        Label helpText = new Label("Check your API key in Settings");
-        helpText.setStyle("-fx-text-fill: #a0a0c0; -fx-font-size: 11px; -fx-font-style: italic;");
+        Button settingsBtn = Ui.button("Settings", "btn-outline");
+        settingsBtn.setOnAction(e -> showSettings());
 
-        Button backBtn = new Button("Back to Menu");
-        backBtn.getStyleClass().add("primary-button");
-        AnimationHelper.applyHoverEffect(backBtn);
+        Button backBtn = Ui.button("Menu", "btn-ghost");
         backBtn.setOnAction(e -> showStartScreen());
 
-        VBox card = new VBox(14);
-        card.getStyleClass().add("card");
-        card.setAlignment(Pos.CENTER);
-        card.setMaxWidth(420);
-        card.getChildren().addAll(errorIcon, errorTitle, errorMsg, helpText, backBtn);
+        HBox actions = new HBox(10, offlineBtn, settingsBtn, backBtn);
+        actions.setAlignment(Pos.CENTER_LEFT);
 
-        errorView.getChildren().add(card);
+        VBox card = new VBox(14, badge, eyebrow, title, errorMsg, help, actions);
+        card.getStyleClass().add("panel");
+        card.setAlignment(Pos.CENTER_LEFT);
+        card.setMaxWidth(520);
+        card.setPadding(new Insets(36, 40, 36, 40));
+        VBox.setMargin(actions, new Insets(10, 0, 0, 0));
+
+        StackPane errorView = new StackPane(card);
+        errorView.getStyleClass().add("root");
+        errorView.setPadding(new Insets(40));
 
         switchRoot(errorView, "Quiz Master — Error");
 
@@ -344,6 +360,7 @@ public class AppController {
     private static void showQuizScene(QuizSession session) {
         QuizView quizView = new QuizView(session);
         switchRoot(quizView.getView(), "Quiz Master — Playing");
+        quizView.focus();
     }
 
     public static void showResultScreen(QuizSession session) {

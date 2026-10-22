@@ -3,16 +3,15 @@ package com.quiz.ui;
 import com.quiz.controller.AppController;
 import com.quiz.util.AnimationHelper;
 import com.quiz.util.ConfigManager;
-import javafx.animation.FadeTransition;
-import javafx.animation.PauseTransition;
-import javafx.animation.TranslateTransition;
-import javafx.animation.ParallelTransition;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.Node;
 import javafx.scene.control.*;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
-import javafx.util.Duration;
+import javafx.scene.text.TextFlow;
+
+import java.util.List;
 
 /**
  * First-run setup screen shown only once.
@@ -23,149 +22,96 @@ public class SetupView {
 
     public SetupView() {
         view = new VBox(0);
-        view.setAlignment(Pos.CENTER);
         view.getStyleClass().add("root");
+        view.setPadding(new Insets(22, 40, 22, 40));
 
-        // === Welcome header ===
-        Label welcomeIcon = new Label("\uD83D\uDC4B"); // 👋
-        welcomeIcon.setStyle("-fx-font-size: 52px;");
+        HBox topBar = new HBox(Ui.brand(), Ui.hgrow(), Ui.label("FIRST-TIME SETUP", "eyebrow"));
+        topBar.setAlignment(Pos.CENTER_LEFT);
 
-        Label welcomeTitle = new Label("Welcome to Quiz Master!");
-        welcomeTitle.getStyleClass().add("title-text");
-        welcomeTitle.setWrapText(true);
-        welcomeTitle.setMaxWidth(400);
-        welcomeTitle.setStyle("-fx-font-size: 30px; -fx-font-weight: bold; -fx-text-fill: #1e1e3a; -fx-text-alignment: center;");
+        // === Left: welcome + steps ===
+        Label kicker = Ui.label("WELCOME", "eyebrow-accent");
+        TextFlow headline = Ui.headline("Before we\nbegin", 80);
+        Label lede = Ui.wrapped("QuizMaster writes fresh questions with Ollama Cloud. "
+                + "Add a free API key to unlock them — or skip and play the built-in set.", 440, "lede");
 
-        Label welcomeSub = new Label("Set up AI-powered questions to get started");
-        welcomeSub.getStyleClass().add("subtitle-text");
-        welcomeSub.setWrapText(true);
-        welcomeSub.setMaxWidth(380);
-        welcomeSub.setStyle("-fx-text-alignment: center; -fx-font-size: 14px; -fx-text-fill: #7070a0;");
+        VBox steps = new VBox(12,
+                step("01", "Sign in at ollama.com"),
+                step("02", "Open Settings → Keys and create a key"),
+                step("03", "Paste it on the right and press Save"));
+        VBox.setMargin(steps, new Insets(10, 0, 0, 0));
 
-        Separator sep = new Separator();
-        sep.setMaxWidth(280);
-        sep.setPadding(new Insets(12, 0, 12, 0));
+        VBox left = new VBox(16, kicker, headline, lede, steps);
+        left.setAlignment(Pos.CENTER_LEFT);
+        left.setMaxWidth(480);
+        HBox.setHgrow(left, Priority.ALWAYS);
 
-        // === API Key ===
-        Label keyLabel = new Label("OLLAMA API KEY");
-        keyLabel.getStyleClass().add("label-text");
+        // === Right: key form ===
+        KeyForm form = new KeyForm(ConfigManager.getSavedApiKey());
 
-        PasswordField keyField = new PasswordField();
-        keyField.setPromptText("Paste your API key from ollama.com");
-        keyField.getStyleClass().add("password-field");
-        keyField.setMaxWidth(360);
-
-        Label keyHint = new Label("Get a free key at ollama.com/settings/keys");
-        keyHint.setStyle("-fx-text-fill: #a0a0c0; -fx-font-size: 11px; -fx-font-style: italic;");
-
-        // === Model ===
-        Label modelLabel = new Label("PREFERRED MODEL");
-        modelLabel.getStyleClass().add("label-text");
-
-        TextField modelField = new TextField("gemma3:4b-cloud");
-        modelField.setPromptText("Cloud model name");
-        modelField.getStyleClass().add("text-field");
-        modelField.setMaxWidth(220);
-
-        Label modelHint = new Label("Auto-fallback to other models if unavailable");
-        modelHint.setStyle("-fx-text-fill: #a0a0c0; -fx-font-size: 11px; -fx-font-style: italic;");
-
-        // === Error label ===
-        Label errorLabel = new Label();
-        errorLabel.setStyle("-fx-text-fill: #dc2626; -fx-font-size: 12px;");
+        Label errorLabel = Ui.label("", "muted");
+        errorLabel.getStyleClass().add("status-bad");
         errorLabel.setVisible(false);
         errorLabel.setManaged(false);
 
-        // === Save button ===
-        Button saveBtn = new Button("Save & Continue  \u2192");
-        saveBtn.getStyleClass().add("primary-button");
+        Button saveBtn = Ui.button("Save & continue", "btn-primary", Ui.I_ARROW_RIGHT);
+        saveBtn.setDefaultButton(true);
         AnimationHelper.applyHoverEffect(saveBtn);
-
         saveBtn.setOnAction(e -> {
-            String key = keyField.getText().trim();
-            if (key.isEmpty()) {
-                errorLabel.setText("Please enter an API key, or skip below");
+            if (form.getKey().isEmpty()) {
+                errorLabel.setText("Paste a key first, or skip for now.");
                 errorLabel.setVisible(true);
                 errorLabel.setManaged(true);
                 return;
             }
-            ConfigManager.setApiKey(key);
-            ConfigManager.setModel(modelField.getText().trim());
+            form.save();
             ConfigManager.setSetupDone();
             AppController.showStartScreen();
         });
 
-        // === Skip button ===
-        Button skipBtn = new Button("Skip for now");
-        skipBtn.getStyleClass().add("secondary-button");
-        AnimationHelper.applyHoverEffect(skipBtn);
-
+        Button skipBtn = Ui.button("Skip for now", "btn-ghost");
         skipBtn.setOnAction(e -> {
             ConfigManager.setSetupDone();
             AppController.showStartScreen();
         });
 
-        Label skipNote = new Label("You can add your API key later in Settings \u2699");
-        skipNote.setStyle("-fx-text-fill: #a0a0c0; -fx-font-size: 11px;");
+        HBox actions = new HBox(10, saveBtn, skipBtn);
+        actions.setAlignment(Pos.CENTER_LEFT);
 
-        // === Card ===
-        VBox card = new VBox(10);
-        card.getStyleClass().add("card");
-        card.setAlignment(Pos.CENTER);
-        card.setMaxWidth(480);
-        card.setPadding(new Insets(36, 40, 36, 40));
-        card.getChildren().addAll(
-                welcomeIcon, welcomeTitle, welcomeSub,
-                sep,
-                keyLabel, keyField, keyHint,
-                modelLabel, modelField, modelHint,
-                errorLabel,
-                saveBtn, skipBtn, skipNote
-        );
+        VBox panel = new VBox(14, Ui.label("Connect Ollama", "h2"), form.getView(), errorLabel, actions);
+        panel.getStyleClass().add("panel");
+        panel.setPadding(new Insets(32));
+        panel.setMinWidth(400);
+        panel.setPrefWidth(460);
+        panel.setMaxWidth(460);
+        panel.setMaxHeight(javafx.scene.layout.Region.USE_PREF_SIZE);
 
-        view.getChildren().add(card);
+        HBox columns = new HBox(64, left, panel);
+        columns.setAlignment(Pos.CENTER);
+        columns.setMaxWidth(1080);
+        columns.setPadding(new Insets(24, 0, 24, 0));
 
-        // === Staggered entrance animation ===
-        card.setOpacity(0);
-        card.setTranslateY(30);
+        VBox centered = new VBox(columns);
+        centered.setAlignment(Pos.CENTER);
 
-        PauseTransition delay = new PauseTransition(Duration.millis(200));
-        delay.setOnFinished(e -> {
-            // Card slides up
-            FadeTransition cardFade = new FadeTransition(Duration.millis(500), card);
-            cardFade.setFromValue(0);
-            cardFade.setToValue(1);
+        ScrollPane scroll = new ScrollPane(centered);
+        scroll.setFitToWidth(true);
+        scroll.setFitToHeight(true);
+        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        VBox.setVgrow(scroll, Priority.ALWAYS);
 
-            TranslateTransition cardSlide = new TranslateTransition(Duration.millis(500), card);
-            cardSlide.setFromY(30);
-            cardSlide.setToY(0);
+        view.getChildren().addAll(topBar, scroll);
 
-            new ParallelTransition(cardFade, cardSlide).play();
+        AnimationHelper.applyStaggeredFadeIn(List.of(kicker, headline, lede, steps), 90);
+        AnimationHelper.applySlideUp(panel, 550);
+        form.focusKey();
+    }
 
-            // Then stagger the children
-            PauseTransition childDelay = new PauseTransition(Duration.millis(300));
-            childDelay.setOnFinished(ev -> {
-                for (int i = 0; i < card.getChildren().size(); i++) {
-                    Node child = card.getChildren().get(i);
-                    child.setOpacity(0);
-                    child.setTranslateY(12);
-
-                    FadeTransition ft = new FadeTransition(Duration.millis(250), child);
-                    ft.setFromValue(0);
-                    ft.setToValue(1);
-                    ft.setDelay(Duration.millis(i * 50));
-
-                    TranslateTransition tt = new TranslateTransition(Duration.millis(250), child);
-                    tt.setFromY(12);
-                    tt.setToY(0);
-                    tt.setDelay(Duration.millis(i * 50));
-
-                    new ParallelTransition(ft, tt).play();
-                }
-            });
-            childDelay.play();
-        });
-        delay.play();
+    private static HBox step(String n, String text) {
+        Label num = Ui.label(n, "eyebrow-accent");
+        num.setMinWidth(28);
+        HBox row = new HBox(12, num, Ui.label(text, "body"));
+        row.setAlignment(Pos.CENTER_LEFT);
+        return row;
     }
 
     public VBox getView() {

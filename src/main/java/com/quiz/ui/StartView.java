@@ -4,159 +4,175 @@ import com.quiz.controller.AppController;
 import com.quiz.model.Difficulty;
 import com.quiz.util.AnimationHelper;
 import com.quiz.util.ConfigManager;
+import javafx.beans.property.BooleanProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.shape.Circle;
+import javafx.scene.text.TextFlow;
+
+import java.util.Arrays;
+import java.util.List;
 
 public class StartView {
 
     private VBox view;
 
+    private Difficulty difficulty = AppController.getLastDifficulty();
+    private int questionCount = AppController.getLastQuestionCount();
+
     public StartView() {
         view = new VBox(0);
-        view.setAlignment(Pos.TOP_CENTER);
         view.getStyleClass().add("root");
+        view.setPadding(new Insets(22, 40, 22, 40));
 
-        // === Top bar with settings gear & theme toggle ===
-        Button settingsBtn = new Button("\u2699");
-        settingsBtn.getStyleClass().add("back-button");
-        settingsBtn.setStyle("-fx-font-size: 20px; -fx-padding: 4 10;");
-        settingsBtn.setOnAction(e -> AppController.showSettings());
-
-        Button themeToggleBtn = new Button("DARK".equals(ConfigManager.getTheme()) ? "\u2600" : "\uD83C\uDF19"); // ☀ / 🌙
-        themeToggleBtn.getStyleClass().add("back-button");
-        themeToggleBtn.setStyle("-fx-font-size: 20px; -fx-padding: 4 10;");
-        themeToggleBtn.setOnAction(e -> {
-            boolean isDark = "DARK".equals(ConfigManager.getTheme());
-            ConfigManager.setTheme(isDark ? "LIGHT" : "DARK");
-            themeToggleBtn.setText(isDark ? "\uD83C\uDF19" : "\u2600");
+        // === Top bar: brand · theme toggle · settings ===
+        boolean dark = AppController.isDarkTheme();
+        Button themeBtn = Ui.iconButton(dark ? Ui.I_SUN : Ui.I_MOON, dark ? "Light theme" : "Dark theme");
+        themeBtn.setOnAction(e -> {
+            ConfigManager.setTheme(AppController.isDarkTheme() ? "LIGHT" : "DARK");
             AppController.applyTheme();
+            boolean nowDark = AppController.isDarkTheme();
+            themeBtn.setGraphic(Ui.icon(nowDark ? Ui.I_SUN : Ui.I_MOON, 18));
+            themeBtn.getTooltip().setText(nowDark ? "Light theme" : "Dark theme");
         });
 
-        Region topSpacer = new Region();
-        HBox.setHgrow(topSpacer, Priority.ALWAYS);
+        Button settingsBtn = Ui.iconButton(Ui.I_SLIDERS, "Settings & API key");
+        settingsBtn.setOnAction(e -> AppController.showSettings());
 
-        HBox topBar = new HBox(topSpacer, themeToggleBtn, settingsBtn);
-        topBar.setPadding(new Insets(12, 16, 0, 16));
-        topBar.setAlignment(Pos.CENTER_RIGHT);
+        HBox topBar = new HBox(10, Ui.brand(), Ui.hgrow(), themeBtn, settingsBtn);
+        topBar.setAlignment(Pos.CENTER_LEFT);
 
-        // === Center content ===
-        VBox centerBox = new VBox(0);
-        centerBox.setAlignment(Pos.CENTER);
-        VBox.setVgrow(centerBox, Priority.ALWAYS);
+        // === Left column: headline + scoreboard ===
+        int games = ConfigManager.getGamesPlayed();
+        Label kicker = Ui.label(String.format("ROUND NO. %03d", games + 1), "eyebrow-accent");
 
-        // === Icon ===
-        Label iconLabel = new Label("\uD83E\uDDE0"); // 🧠
-        iconLabel.getStyleClass().add("icon-text");
+        TextFlow headline = Ui.headline("Quiz\nMaster", 96);
 
-        // === Title ===
-        Label titleLabel = new Label("Quiz Master");
-        titleLabel.getStyleClass().add("title-text");
-        
-        // === Lifetime Stats at Home ===
-        HBox statsBox = new HBox(16);
-        statsBox.setAlignment(Pos.CENTER);
-        
-        Label ptsLabel = new Label("\u2B50 " + ConfigManager.getLifetimePoints() + " Pts");
-        ptsLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #f59e0b; -fx-font-size: 14px;");
-        
-        Label gLabel = new Label("\uD83C\uDFAE " + ConfigManager.getGamesPlayed() + " Games");
-        gLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #3b82f6; -fx-font-size: 14px;");
+        Label lede = Ui.wrapped(
+                "Fifteen seconds a question. Three lifelines. "
+                + "Fresh AI-written trivia that never repeats.", 440, "lede");
 
-        statsBox.getChildren().addAll(ptsLabel, gLabel);
+        HBox scoreboard = Ui.statRow(28,
+                Ui.stat("LIFETIME PTS", Ui.num(ConfigManager.getLifetimePoints()), "stat-value"),
+                Ui.stat("GAMES", Ui.num(games), "stat-value"),
+                Ui.stat("BEST", Ui.num(ConfigManager.getBestScore()), "stat-value"));
+        VBox.setMargin(scoreboard, new Insets(18, 0, 0, 0));
 
-        // === Subtitle ===
-        Label subtitleLabel = new Label("Test your knowledge. Prove your brilliance.");
-        subtitleLabel.getStyleClass().add("subtitle-text");
+        VBox left = new VBox(16, kicker, headline, lede, scoreboard);
+        left.setAlignment(Pos.CENTER_LEFT);
+        left.setMaxWidth(500);
+        HBox.setHgrow(left, Priority.ALWAYS);
 
-        Separator sep = new Separator();
-        sep.setMaxWidth(260);
-        sep.setPadding(new Insets(10, 0, 10, 0));
+        // === Right column: round setup panel ===
+        VBox panel = buildSetupPanel();
 
-        // === Difficulty ===
-        Label diffLabel = new Label("DIFFICULTY");
-        diffLabel.getStyleClass().add("label-text");
+        HBox columns = new HBox(64, left, panel);
+        columns.setAlignment(Pos.CENTER);
+        columns.setMaxWidth(1080);
+        VBox.setVgrow(columns, Priority.ALWAYS);
 
-        ComboBox<Difficulty> difficultyCombo = new ComboBox<>();
-        difficultyCombo.getItems().addAll(Difficulty.values());
-        difficultyCombo.setValue(Difficulty.EASY);
-        difficultyCombo.getStyleClass().add("combo-box");
+        StackPane center = new StackPane(columns);
+        VBox.setVgrow(center, Priority.ALWAYS);
 
-        // === Question Count ===
-        Label countLabel = new Label("QUESTIONS");
-        countLabel.getStyleClass().add("label-text");
+        // === Footer ===
+        Label footer = Ui.label("JAVAFX 17  ·  OLLAMA CLOUD  ·  "
+                + "PRESS ENTER TO START", "mono");
+        HBox footerBar = new HBox(footer);
+        footerBar.setAlignment(Pos.CENTER);
 
-        ComboBox<Integer> countCombo = new ComboBox<>();
-        countCombo.getItems().addAll(5, 10, 15, 20);
-        countCombo.setValue(5);
-        countCombo.getStyleClass().add("combo-box");
+        view.getChildren().addAll(topBar, center, footerBar);
 
-        // === AI toggle (only show if API key is configured) ===
+        AnimationHelper.applyStaggeredFadeIn(List.of(kicker, headline, lede, scoreboard), 80);
+        AnimationHelper.applySlideUp(panel, 550);
+    }
+
+    private VBox buildSetupPanel() {
+        Label title = Ui.label("Set up your round", "h2");
+
+        // Difficulty
+        HBox diffSeg = Ui.segmented(
+                Arrays.asList(Difficulty.values()),
+                Arrays.asList("Easy", "Medium", "Hard", "Mixed"),
+                difficulty, false, d -> difficulty = d);
+
+        // Question count
+        HBox countSeg = Ui.segmented(
+                Arrays.asList(5, 10, 15, 20),
+                Arrays.asList("05", "10", "15", "20"),
+                questionCount, true, c -> questionCount = c);
+
+        // AI source
         boolean hasKey = ConfigManager.hasApiKey();
+        BooleanProperty useAI = Ui.bool(hasKey);
 
-        CheckBox aiToggle = new CheckBox("Use AI-Generated Questions");
-        aiToggle.getStyleClass().add("check-box");
-        aiToggle.setSelected(hasKey);
+        StackPane sw = Ui.toggleSwitch(useAI);
+        sw.setDisable(!hasKey);
 
-        Label aiStatus = new Label();
-        if (hasKey) {
-            aiStatus.setText("\u2713 AI ready \u2022 Model: " + ConfigManager.getModel());
-            aiStatus.setStyle("-fx-text-fill: #22c55e; -fx-font-size: 11px;");
-        } else {
-            aiStatus.setText("No API key \u2022 Set up in Settings \u2699");
-            aiStatus.setStyle("-fx-text-fill: #a0a0c0; -fx-font-size: 11px;");
-            aiToggle.setSelected(false);
-            aiToggle.setDisable(true);
+        Label aiTitle = Ui.label("AI-generated questions", "h3");
+        Circle statusDot = Ui.dot(hasKey ? "dot-ok" : "dot-bad");
+        Label statusText = Ui.label(hasKey ? "Ready · " + ConfigManager.getModel() : "No API key yet", "muted");
+        HBox status = new HBox(7, statusDot, statusText);
+        status.setAlignment(Pos.CENTER_LEFT);
+
+        VBox aiText = new VBox(3, aiTitle, status);
+        if (!hasKey) {
+            Button addKey = Ui.button("Add an Ollama key →", "btn-link");
+            addKey.setOnAction(e -> AppController.showSettings());
+            aiText.getChildren().add(addKey);
         }
 
-        // === Start button ===
-        Button startButton = new Button("Start Quiz  \u2192");
-        startButton.getStyleClass().add("primary-button");
-        AnimationHelper.applyHoverEffect(startButton);
+        HBox aiRow = new HBox(14, Ui.icon(Ui.I_SPARKLE, 22, "icon-accent"), aiText, Ui.hgrow(), sw);
+        aiRow.setAlignment(Pos.CENTER_LEFT);
+        aiRow.getStyleClass().add("panel-flat");
 
-        startButton.setOnAction(e -> {
-            int questionCount = countCombo.getValue();
-            if (aiToggle.isSelected() && hasKey) {
+        Label offlineNote = Ui.wrapped("Using the built-in question bank (30+ curated questions).", 360, "muted");
+        offlineNote.visibleProperty().bind(useAI.not());
+        offlineNote.managedProperty().bind(useAI.not());
+
+        // Start
+        Button startBtn = Ui.button("Start round", "btn-primary", Ui.I_ARROW_RIGHT);
+        startBtn.setMaxWidth(Double.MAX_VALUE);
+        startBtn.setDefaultButton(true);
+        AnimationHelper.applyHoverEffect(startBtn);
+        startBtn.setOnAction(e -> {
+            if (useAI.get() && ConfigManager.hasApiKey()) {
                 AppController.startQuizWithAI(
-                        difficultyCombo.getValue(),
+                        difficulty,
                         ConfigManager.getApiKey(),
                         ConfigManager.getModel(),
                         questionCount
                 );
             } else {
-                AppController.startQuiz(difficultyCombo.getValue(), questionCount);
+                AppController.startQuiz(difficulty, questionCount);
             }
         });
 
-        // === Card ===
-        VBox card = new VBox(12);
-        card.getStyleClass().add("card");
-        card.setAlignment(Pos.CENTER);
-        card.setMaxWidth(440);
-        card.getChildren().addAll(
-                iconLabel, titleLabel, statsBox, subtitleLabel,
-                sep,
-                diffLabel, difficultyCombo,
-                countLabel, countCombo,
-                aiToggle, aiStatus,
-                startButton
-        );
+        VBox panel = new VBox(10,
+                title,
+                gap(8), Ui.label("DIFFICULTY", "eyebrow"), diffSeg,
+                gap(8), Ui.label("QUESTIONS", "eyebrow"), countSeg,
+                gap(8), aiRow, offlineNote,
+                gap(10), startBtn);
+        panel.getStyleClass().add("panel");
+        panel.setPadding(new Insets(32));
+        panel.setMinWidth(380);
+        panel.setPrefWidth(420);
+        panel.setMaxWidth(420);
+        panel.setMaxHeight(javafx.scene.layout.Region.USE_PREF_SIZE);
+        return panel;
+    }
 
-        // === Footer ===
-        Label footer = new Label("Powered by JavaFX  \u00B7  AI by Ollama");
-        footer.getStyleClass().add("footer-text");
-        footer.setPadding(new Insets(15, 0, 0, 0));
-
-        centerBox.getChildren().addAll(card, footer);
-
-        view.getChildren().addAll(topBar, centerBox);
-        view.setFillWidth(true);
-
-        AnimationHelper.applySlideUp(card, 550);
+    private static Node gap(double h) {
+        javafx.scene.layout.Region r = new javafx.scene.layout.Region();
+        r.setMinHeight(h);
+        r.setPrefHeight(h);
+        return r;
     }
 
     public VBox getView() {

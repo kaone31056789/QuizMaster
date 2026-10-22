@@ -30,8 +30,8 @@ public class AIQuestionGenerator {
 
     private static final String DEFAULT_HOST = "https://ollama.com";
 
-    /** Primary model — proven reliable and fast (4B params) */
-    private static final String PRIMARY_MODEL = "gemma3:4b-cloud";
+    /** Default primary model — proven reliable and fast (4B params) */
+    public static final String DEFAULT_MODEL = "gemma3:4b-cloud";
 
     /** Fallbacks — only models with CONFIRMED cloud tags */
     private static final List<String> FALLBACK_MODELS = Arrays.asList(
@@ -105,6 +105,7 @@ public class AIQuestionGenerator {
 
     private String host;
     private String apiKey;
+    private String primaryModel;
     private volatile String usedModel = "";
     private volatile String lastError = "";
 
@@ -121,14 +122,14 @@ public class AIQuestionGenerator {
     }
 
     public AIQuestionGenerator(String host, String apiKey) {
-        this.host = host;
-        this.apiKey = apiKey;
+        this(host, ConfigManager.getModel(), apiKey);
     }
 
-    // Backward compat — model param ignored, we use PRIMARY_MODEL
+    /** Uses the given model first, then falls back through FALLBACK_MODELS */
     public AIQuestionGenerator(String host, String model, String apiKey) {
         this.host = host;
         this.apiKey = apiKey;
+        this.primaryModel = (model == null || model.isBlank()) ? DEFAULT_MODEL : model.trim();
     }
 
     public void setStatusCallback(StatusCallback callback) {
@@ -142,13 +143,14 @@ public class AIQuestionGenerator {
      * Quick connection test with primary model.
      */
     public String testConnection() {
-        String result = quickTest(PRIMARY_MODEL);
+        String result = quickTest(primaryModel);
         if (result == null) {
-            usedModel = PRIMARY_MODEL;
+            usedModel = primaryModel;
             return null;
         }
         // Try fallbacks
         for (String fb : FALLBACK_MODELS) {
+            if (fb.equals(primaryModel)) continue;
             result = quickTest(fb);
             if (result == null) {
                 usedModel = fb;
@@ -205,7 +207,7 @@ public class AIQuestionGenerator {
     public List<Question> generateQuestions(Difficulty difficulty, int count) throws Exception {
         // Over-request by 2 to compensate for occasional parse failures
         int requestCount = count + 2;
-        List<Question> results = generateWithModel(PRIMARY_MODEL, difficulty, requestCount);
+        List<Question> results = generateWithModel(primaryModel, difficulty, requestCount);
 
         if (results.size() >= count) {
             return results.subList(0, count);
@@ -213,10 +215,11 @@ public class AIQuestionGenerator {
 
         // Primary didn't get enough — try fallbacks for the remainder
         int needed = count - results.size();
-        System.out.println(PRIMARY_MODEL + " got " + results.size() + "/" + count + ". Trying fallbacks for " + needed + "...");
+        System.out.println(primaryModel + " got " + results.size() + "/" + count + ". Trying fallbacks for " + needed + "...");
 
         for (String fallback : FALLBACK_MODELS) {
             if (needed <= 0) break;
+            if (fallback.equals(primaryModel)) continue;
 
             if (statusCallback != null) {
                 statusCallback.onStatus(fallback, results.size() + 1, count);

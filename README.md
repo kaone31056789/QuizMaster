@@ -1,6 +1,6 @@
 # 🧠 QuizMaster
 
-A modern, professionally designed quiz application built with **JavaFX 17** following the **MVC architecture pattern**. Features a beautiful dark-mode glassmorphism interface with smooth animations, AI-powered question generation via **Ollama Cloud API**, and a sophisticated points-and-trophy progression system.
+A modern, professionally designed quiz application built with **JavaFX 17** following the **MVC architecture pattern**. Features an editorial, quiz-show-inspired interface with light and dark themes, smooth animations, AI-powered question generation via **Ollama Cloud API**, and a sophisticated points-and-trophy progression system.
 
 ![QuizMaster Application Screenshot](assets/screenshot.png)
 
@@ -19,7 +19,7 @@ A modern, professionally designed quiz application built with **JavaFX 17** foll
 - **🎯 50:50** — Removes 2 wrong options, leaving only the correct answer and 1 decoy (1 use per quiz)
 - **⏩ Skip** — Skip the current question without any penalty or score loss (1 use per quiz)
 - **⏰ +10s** — Adds 10 extra seconds to the countdown timer (1 use per quiz)
-- Lifelines appear as vibrant colored pill buttons; turn grey once used
+- Lifelines sit under the answers as outlined chips (keys **F**, **S**, **T**) and fade once used
 
 ### 📊 Scoring & Progression
 - **Advanced Points System** — Base points by difficulty (Easy: 100, Medium: 200, Hard: 300) + time bonus + streak multiplier
@@ -33,9 +33,12 @@ A modern, professionally designed quiz application built with **JavaFX 17** foll
 - **Prompt Injection** — Past question snippets are injected into AI prompts to avoid similar topics
 
 ### 🎨 UI & Design
-- **Neon Cyberpunk Dark Mode** — Frosted glass cards, vibrant gradients, and premium typography
-- **Light / Dark Theme Toggle** — Switch instantly with a single click
-- **Animated Splash Screen** — Dramatic startup with bouncing logo and synchronized fade animations
+- **Two Themes** — *Paper* (warm cream & ink) and *Studio* (dark), both driven by shared CSS colour tokens; toggle from the top bar
+- **Bundled Typography** — DM Serif Display headlines, Space Mono scoreboards, IBM Plex Sans body text
+- **Countdown Ring** — Smooth circular timer that turns red in the last five seconds
+- **Keyboard Play** — Answer with **A–D** or **1–4**
+- **Crisp Vector Icons** — SVG-path icons instead of emoji (which JavaFX can't render reliably)
+- **Animated Splash Screen** — Monogram pop, wordmark rise and an accent rule that draws itself
 - **Screen Shake** — Heavy shake effect on wrong answers for high-stakes feel
 - **Floating Points** — +Points animation on correct answers
 - **Wrong Answer Review** — See exactly which questions you got wrong at the quiz end, with your answer vs. the correct one
@@ -96,8 +99,8 @@ QuizMaster/
     │       └── DataLoader.java          # JSON parsing for built-in questions
     └── resources/
         ├── questions.json               # 30+ built-in fallback trivia questions
-        ├── styles.css                   # Light glassmorphic theme
-        └── dark-mode.css                # Neon Cyberpunk dark theme
+        ├── styles.css                   # Design tokens + light "Paper" theme
+        └── dark-mode.css                # Dark "Studio" theme (token overrides)
 ```
 
 ---
@@ -126,10 +129,20 @@ QuizMaster uses the Ollama Cloud API to generate unique trivia questions in real
 
 ### Setup
 1. **Get an API key**: Visit [ollama.com/settings/keys](https://ollama.com/settings/keys)
-2. **Launch QuizMaster** and check **"Use AI-Generated Questions"**
-3. **Paste your API key** into the secure input field during first-run setup
-4. **Select a difficulty** — the AI receives detailed instructions per difficulty level
-5. **Start the quiz** — 7 questions are fired in parallel, best 5 are selected
+2. **Paste it** on the first-run setup screen, or later under **Settings** (the sliders icon, top right)
+3. Press **Test key** — a key that works is saved immediately
+4. Pick a difficulty and question count, leave **AI-generated questions** on, and press **Start round**
+
+### Where the API key is stored
+The key is saved once and reused on every launch. It lives **outside the project**, so it can never be committed to Git:
+
+| OS | Path |
+|----|------|
+| Windows | `C:\Users\<you>\.quizmaster\config.properties` |
+| macOS / Linux | `~/.quizmaster/config.properties` |
+
+It's stored as plain text under `ollama.apikey`. Settings → **Open folder** jumps straight there.
+Alternatively, set the `OLLAMA_API_KEY` environment variable — it overrides the saved key.
 
 ### Difficulty System
 The AI receives detailed prompt instructions per difficulty:

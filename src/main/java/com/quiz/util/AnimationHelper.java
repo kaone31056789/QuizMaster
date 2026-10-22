@@ -35,12 +35,10 @@ public class AnimationHelper {
     }
 
     public static void spawnComboGraphic(javafx.scene.layout.Pane parent, int streak) {
-        javafx.scene.control.Label comboLabel = new javafx.scene.control.Label("\uD83D\uDD25 " + streak + "x COMBO!");
-        comboLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 48px; -fx-text-fill: #ec4899; -fx-effect: dropshadow(gaussian, #f472b6, 20, 0.5, 0, 0);");
-        
-        comboLabel.setLayoutX(parent.getWidth() / 2 - 120);
-        comboLabel.setLayoutY(parent.getHeight() / 2 - 50);
-        
+        javafx.scene.control.Label comboLabel = new javafx.scene.control.Label(streak + "× combo");
+        comboLabel.getStyleClass().add("combo-text");
+        comboLabel.setMouseTransparent(true);
+
         parent.getChildren().add(comboLabel);
         
         ScaleTransition st = new ScaleTransition(Duration.millis(400), comboLabel);
